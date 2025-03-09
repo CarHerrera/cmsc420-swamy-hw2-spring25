@@ -1,3 +1,4 @@
+import java.util.List;
 /**
  * A convenient class that stores a pair of integers.
  * DO NOT MODIFY THIS CLASS.
@@ -32,7 +33,91 @@ class IntPair {
         return 31 * first + second;
     }
 }
+class Node{
+    private Node upLeft, upRight, downLeft, downRight;
+    private int value, height, depth; 
+    boolean isPeak, isValley; 
+    public Node(int height, int value){
+        this.value = value;
+        this.height = height;
+        this.depth = 0;
+        this.isPeak = false;
+        this.isValley = false;
+    }
+    public void setValue(int n){this.value = n;}
+    public void setHeight(int n){this.height = n;}
+    public void setDepth(int n){this.depth = n;}
+    public void setUpLeft(Node left){this.upLeft = left;}
+    public void setUpRight(Node n){this.upRight = n;}
+    public void setDownLeft(Node n){this.downLeft = n;}
+    public void setDownRight(Node n){this.downRight = n;}
+    public void setPeak(boolean b){this.isPeak = b;}
+    public void setValley(boolean b){this.isValley = b;}
+    public Node getUpLeft(){return this.upLeft;}
+    public Node getUpRight(){return this.upRight;}
+    public Node getDownLeft(){return this.downLeft;}
+    public Node getDownRight(){return this.downRight;}
+    public boolean isPeak(){return this.isPeak;}
+    public boolean isValley(){return this.isValley;}
+    public int getValue(){ return this.value;}
+    public int getHeight(){ return this.height;}
+    public int getDepth(){return this.depth;}
+}
+class TreeGraph{
+    Node head, tail;
+    int count;
+    public TreeGraph(Node h){
+        this.head = h;
+        this.tail = h;
+        this.head.setValley(true);
+        this.head.setPeak(true);
+        this.count= 1;
+    }
+    public Node addLandform(Node oldNode, Node newNode){
+        int oldDepth = oldNode.getDepth();
+        if(oldNode.getHeight() < newNode.getHeight()){
+            // Old Node is smaller
+            oldNode.setUpRight(newNode);
+            newNode.setDownLeft(oldNode);
+            if(oldNode.isPeak()){
+                // Ascending Already
+                oldNode.setPeak(false);
+                newNode.setPeak(true);
+            } else if(oldNode.isValley()){
+                // Begin Ascent
+                newNode.setPeak(true);
+            }
+            
+            
+        } else {
+            // Old Node larger
+            oldNode.setDownRight(newNode);
+            newNode.setUpLeft(oldNode);
+            if (oldNode.isValley()){
+                // Descending
+                oldNode.setValley(false);
+                newNode.setValley(true);
+                newNode.setDepth(oldDepth+1);
+            } else if(oldNode.isPeak()){
+                // Begin to descend
+                newNode.setValley(true);
+                newNode.setDepth(1);
+            }
+            
+        }
+        return newNode;
+    }
 
+    public void add(Node n){
+        if (this.tail == this.head){
+            this.tail = addLandform(this.head, n);
+            this.head.setDepth(0);
+        } else{
+            this.tail = addLandform(this.tail, n);
+        }
+        this.count++;
+    }
+}
 /**
  * TreasureValleyExplorer class operates on a landscape of Numerica,
  * selectively modifying the most and least valuable valleys of a specified
@@ -41,10 +126,10 @@ class IntPair {
  * DO NOT MODIFY THE SIGNATURE OF THE METHODS PROVIDED IN THIS CLASS.
  * You are encouraged to add methods and variables in the class as needed.
  *
- * @author <Your Name goes here>
+ * @author Carlos Herrera
  */
 public class TreasureValleyExplorer {
-
+    private TreeGraph treasureMap;
     // Create instance variables here.
 
     /**
@@ -59,6 +144,13 @@ public class TreasureValleyExplorer {
      */
     public TreasureValleyExplorer(int[] heights, int[] values) {
         // TODO: Implement the constructor.
+        if (heights.length >= 1){
+            Node root = new Node(heights[0], values[0]);
+            this.treasureMap = new TreeGraph(root);
+            for(int i =1; i < heights.length; i++){
+                treasureMap.add(new Node(heights[i], values[i]));
+            }
+        }
     }
 
     /**
