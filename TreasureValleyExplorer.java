@@ -1,4 +1,5 @@
-import java.util.List;
+import java.util.HashMap;
+// import java.util.List;
 /**
  * A convenient class that stores a pair of integers.
  * DO NOT MODIFY THIS CLASS.
@@ -33,39 +34,172 @@ class IntPair {
         return 31 * first + second;
     }
 }
+enum Color {
+    RED, BLACK
+}
 class Node{
-    private Node upLeft, upRight, downLeft, downRight;
+    private Node left, right, downLeft, downRight, parent;
     private int value, height, depth; 
-    boolean isPeak, isValley; 
+    private boolean isPeak, isValley, isNil; 
+    private Color color;
     public Node(int height, int value){
         this.value = value;
         this.height = height;
         this.depth = 0;
         this.isPeak = false;
         this.isValley = false;
+        this.color = Color.RED;
+        this.isNil = false;
+        this.downLeft = this.downRight = new Node();
+        // this.parent = null;ws
+    }
+    public Node (){
+        this.isNil = true;
+        this.color = Color.BLACK;
     }
     public void setValue(int n){this.value = n;}
     public void setHeight(int n){this.height = n;}
     public void setDepth(int n){this.depth = n;}
-    public void setUpLeft(Node left){this.upLeft = left;}
-    public void setUpRight(Node n){this.upRight = n;}
+    public void setBack(Node left){this.left = left;}
+    public void setNext(Node n){this.right = n;}
     public void setDownLeft(Node n){this.downLeft = n;}
     public void setDownRight(Node n){this.downRight = n;}
     public void setPeak(boolean b){this.isPeak = b;}
     public void setValley(boolean b){this.isValley = b;}
-    public Node getUpLeft(){return this.upLeft;}
-    public Node getUpRight(){return this.upRight;}
+    public void setColor(Color c){this.color = c;}
+    public void setParent(Node n){this.parent = n;}
+    public Node getLeft(){return this.left;}
+    public Node getRight(){return this.right;}
     public Node getDownLeft(){return this.downLeft;}
     public Node getDownRight(){return this.downRight;}
+    public Node getParent(){return this.parent;}
+    public boolean isNil(){return this.isNil;}
     public boolean isPeak(){return this.isPeak;}
     public boolean isValley(){return this.isValley;}
+    public Color getColor(){return this.color;}
     public int getValue(){ return this.value;}
     public int getHeight(){ return this.height;}
     public int getDepth(){return this.depth;}
 }
+class TreasureTree{
+    Node root;
+    public TreasureTree(Node n){
+        this.root = n;
+        this.root.setColor(Color.BLACK);
+    }
+
+    public void addValley(Node n){ 
+        addLeaf(this.root, n);
+        insertFix(n);
+    }
+    public Node addLeaf(Node last, Node n){
+        if (last.isNil()){
+            return n;
+        } else {
+            if(last.getValue() < n.getValue()){
+                // New Node has a larger value so shuold go right
+                Node inserted = addLeaf(last.getDownRight(), n);
+                last.setDownRight(inserted);
+                inserted.setParent(last);
+            } else {
+                Node inserted = addLeaf(last.getDownLeft(), n);
+                last.setDownLeft(inserted);
+                inserted.setParent(last);
+            }
+            return last;
+        }
+    }
+    public void insertFix(Node n){
+        Node next = n;
+        while(next.getParent().getColor() == Color.RED){
+            Node parent = next.getParent();
+            Node gp = parent.getParent();
+            if(gp.getDownLeft() == parent){
+                // Parent is the Left Child
+                if (gp.getDownRight().getColor() == Color.RED){
+                    gp.getDownRight().setColor(Color.BLACK);
+                    parent.setColor(Color.BLACK);
+                    gp.setColor(Color.RED);
+                    next = gp;
+                } else if (parent.getDownRight() == next && gp.getDownLeft().getColor()==Color.BLACK){
+                    // Triangle Case
+                    next = parent;
+                    rotateLeft(parent);
+                } else 
+                // Line Case 
+                if(parent.getDownLeft() == next&& gp.getDownLeft().getColor()==Color.BLACK){
+                    rotateRight(gp);
+                    parent.setColor(Color.BLACK);
+                    gp.setColor(Color.RED);
+                    next = gp;
+                } 
+            } else {
+                // Parent is the Right child
+                if (gp.getDownLeft().getColor() == Color.RED){
+                    gp.getDownLeft().setColor(Color.BLACK);
+                    parent.setColor(Color.BLACK);
+                    gp.setColor(Color.RED);
+                    next = gp;
+                } else if (gp.getDownLeft().getColor() == Color.BLACK && parent.getDownRight() == next){
+                    // Line Case    
+                    rotateLeft(gp);
+                    parent.setColor(Color.BLACK);
+                    gp.setColor(Color.BLACK);
+                    next = gp;
+                } else if (gp.getDownLeft().getColor() == Color.BLACK && parent.getDownLeft() == next){
+                    // Triangle Case
+                    next = parent;
+                    rotateRight(parent);
+                }
+            }
+            if(next == this.root){
+                break;
+            }
+        }
+        this.root.setColor(Color.BLACK);
+    }
+
+    public void rotateLeft(Node x){
+        Node y = x.getDownRight();
+        x.setDownRight(y.getDownLeft());
+        if(x.getParent()==null){
+            this.root = y;
+        } else {
+            Node p = x.getParent();
+            if (p.getLeft() == x){
+                p.setDownLeft(y);
+            } else{
+                p.setDownRight(y);
+            }
+            y.setParent(p);
+        }
+        x.setParent(y);
+        y.setDownLeft(x);
+    }
+    public void rotateRight(Node x){
+        Node y = x.getDownLeft();
+        x.setDownLeft(y.getDownRight());
+        if(x.getParent()== null){
+            this.root = y;
+            x.setParent(y);
+        } else {
+            Node p = x.getParent();
+            if (p.getRight() == x){
+                p.setDownRight(y);
+            } else {
+                p.setDownLeft(y);
+            }
+            y.setParent(p);
+        }
+        y.setDownRight(x);
+        x.setParent(y);
+    }
+}
 class TreeGraph{
     Node head, tail;
     int count;
+    // ArrayList<TreasureTree> valley = new ArrayList<TreasureTree>();
+    HashMap<Integer, TreasureTree> valleyTracker = new HashMap<Integer, TreasureTree>();
     public TreeGraph(Node h){
         this.head = h;
         this.tail = h;
@@ -77,22 +211,26 @@ class TreeGraph{
         int oldDepth = oldNode.getDepth();
         if(oldNode.getHeight() < newNode.getHeight()){
             // Old Node is smaller
-            oldNode.setUpRight(newNode);
-            newNode.setDownLeft(oldNode);
+            oldNode.setNext(newNode);
+            newNode.setBack(oldNode);
             if(oldNode.isPeak()){
                 // Ascending Already
                 oldNode.setPeak(false);
                 newNode.setPeak(true);
             } else if(oldNode.isValley()){
-                // Begin Ascent
+                // Begin Ascent, depth already init to 0
                 newNode.setPeak(true);
-            }
-            
-            
+                if(valleyTracker.get(oldDepth) == null){
+                    valleyTracker.put(oldDepth, new TreasureTree(oldNode));
+                } else {
+                    valleyTracker.get(oldDepth).addValley(oldNode);
+                }
+                // valleyTracker.put(oldDepth, oldNode)
+            }   
         } else {
             // Old Node larger
-            oldNode.setDownRight(newNode);
-            newNode.setUpLeft(oldNode);
+            oldNode.setNext(newNode);
+            newNode.setBack(oldNode);
             if (oldNode.isValley()){
                 // Descending
                 oldNode.setValley(false);
@@ -117,6 +255,8 @@ class TreeGraph{
         }
         this.count++;
     }
+    public TreasureTree getTreasuresAtDepth(int i) {return this.valleyTracker.get(i);}
+    public int getCount(){return this.count;}
 }
 /**
  * TreasureValleyExplorer class operates on a landscape of Numerica,
@@ -129,9 +269,8 @@ class TreeGraph{
  * @author Carlos Herrera
  */
 public class TreasureValleyExplorer {
-    private TreeGraph treasureMap;
     // Create instance variables here.
-
+    private TreeGraph treasureMap;
     /**
      * Constructor to initialize the TreasureValleyExplorer with the given heights
      * and values
@@ -143,7 +282,6 @@ public class TreasureValleyExplorer {
      *                of points in the landscape.
      */
     public TreasureValleyExplorer(int[] heights, int[] values) {
-        // TODO: Implement the constructor.
         if (heights.length >= 1){
             Node root = new Node(heights[0], values[0]);
             this.treasureMap = new TreeGraph(root);
@@ -161,7 +299,7 @@ public class TreasureValleyExplorer {
      */
     public boolean isEmpty() {
         // TODO: Implement the isEmpty method.
-        return false;
+        return treasureMap.getCount() == 0;
     }
 
     /**
@@ -234,7 +372,12 @@ public class TreasureValleyExplorer {
      */
     public IntPair getMostValuableValley(int depth) {
         // TODO: Implement the getMostValuableValleyValue method
-        return null;
+        TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
+        Node curr = t.root;
+        while(!curr.getDownRight().isNil()){
+            curr = curr.getDownRight();
+        }
+        return new IntPair(curr.getHeight(), curr.getValue());
     }
 
     /**
