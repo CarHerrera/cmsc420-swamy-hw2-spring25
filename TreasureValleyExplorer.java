@@ -51,12 +51,13 @@ class Node{
         this.isValley = false;
         this.color = Color.RED;
         this.isNil = false;
-        this.downLeft = this.downRight = new Node();
-        // this.parent = null;ws
+        this.parent = null;
     }
     public Node (){
         this.isNil = true;
         this.color = Color.BLACK;
+        this.downLeft = this;
+        this.downRight = this;
     }
     public void setValue(int n){this.value = n;}
     public void setHeight(int n){this.height = n;}
@@ -85,15 +86,16 @@ class Node{
 class TreasureTree{
     Node root;
     int count;
-    public TreasureTree(Node n){
+    public TreasureTree(Node n, Node NIL){
         this.root = n;
         this.count = 1;
         this.root.setColor(Color.BLACK);
+        this.root.setDownLeft(NIL);
+        this.root.setDownRight(NIL);
     }
 
     public void addValley(Node n){ 
-        addLeaf(this.root, n);
-        insertFix(n);
+        addLeaf(n);
         this.count++;
     }
     public void removeValley(Node n){
@@ -113,15 +115,25 @@ class TreasureTree{
             }
             org = min.getColor();
             x = min.getDownRight();
-            transplant(min, x);
-            min.setDownRight(x.getParent());
-            x.getParent().setParent(min);;
-            transplant(n,min);
+            if(min.getParent() == n){
+                x.setParent(min);
+            } else {
+                transplant(min, min.getDownRight());
+                min.setDownRight(n.getDownRight());
+                min.getDownRight().setParent(min);
+            }
+            transplant(n, min);
+            min.setDownLeft(n.getDownLeft());
+            min.getDownLeft().setParent(min);
+            min.setColor(n.getColor());
             
         }
+
         if (org == Color.BLACK){
             delete_fixup(x);
         }
+        // n.setDownLeft(NIL);
+        // n.setDownRight(NIL);
         this.count--;
     }
     public void delete_fixup(Node x){
@@ -176,7 +188,7 @@ class TreasureTree{
                     sibling.setColor(parent.getColor());
                     parent.setColor(Color.BLACK);
                     sibling.getDownLeft().setColor(Color.BLACK);
-                    rotateLeft(parent);
+                    rotateRight(parent);
                     x = root;
                 }
             }
@@ -194,22 +206,33 @@ class TreasureTree{
         }
         v.setParent(u.getParent());
     }
-    public Node addLeaf(Node last, Node n){
-        if (last.isNil()){
-            return n;
-        } else {
-            if(last.getValue() < n.getValue()){
-                // New Node has a larger value so shuold go right
-                Node inserted = addLeaf(last.getDownRight(), n);
-                last.setDownRight(inserted);
-                inserted.setParent(last);
+    public void addLeaf(Node n){
+        //System.out.println("Visiting node " + last + " and adding " + n);
+        Node curr = this.root;
+        Node y = null;
+        while (!curr.isNil()){
+            y = curr;
+            if(n.getValue() < curr.getValue()){
+                curr = curr.getDownLeft();
             } else {
-                Node inserted = addLeaf(last.getDownLeft(), n);
-                last.setDownLeft(inserted);
-                inserted.setParent(last);
+                curr = curr.getDownRight();
             }
-            return last;
         }
+        n.setParent(y);
+        if (y == null){
+            this.root = n;
+        } else if (n.getValue() < y.getValue()){
+            y.setDownLeft(n);
+        } else {
+            y.setDownRight(n);
+        }
+
+        if(n.getParent() == null){
+            n.setColor(Color.BLACK);
+            return;
+        } 
+        if(n.getParent().getParent() == null) { return;}
+        insertFix(n);
     }
     public void insertFix(Node n){
         Node next = n;
@@ -218,82 +241,85 @@ class TreasureTree{
             Node gp = parent.getParent();
             if(gp.getDownLeft() == parent){
                 // Parent is the Left Child
-                if (gp.getDownRight().getColor() == Color.RED){
-                    gp.getDownRight().setColor(Color.BLACK);
+                Node r = gp.getDownRight();
+                if (r.getColor() == Color.RED){
                     parent.setColor(Color.BLACK);
+                    r.setColor(Color.BLACK);
                     gp.setColor(Color.RED);
                     next = gp;
-                } else if (parent.getDownRight() == next && gp.getDownLeft().getColor()==Color.BLACK){
-                    // Triangle Case
-                    next = parent;
-                    rotateLeft(parent);
-                } else 
-                // Line Case 
-                if(parent.getDownLeft() == next&& gp.getDownLeft().getColor()==Color.BLACK){
+                } else {
+                    if (next == parent.getDownRight()){
+                        next = parent;
+                        rotateLeft(next);
+                    }
+                    parent.setColor(Color.BLACK);
+                    gp.setColor(Color.RED);
                     rotateRight(gp);
-                    parent.setColor(Color.BLACK);
-                    gp.setColor(Color.RED);
-                    next = gp;
-                } 
+                }
             } else {
                 // Parent is the Right child
-                if (gp.getDownLeft().getColor() == Color.RED){
-                    gp.getDownLeft().setColor(Color.BLACK);
+                Node l = gp.getDownLeft();
+                if (l.getColor() == Color.RED){
+                    l.setColor(Color.BLACK);
                     parent.setColor(Color.BLACK);
                     gp.setColor(Color.RED);
                     next = gp;
-                } else if (gp.getDownLeft().getColor() == Color.BLACK && parent.getDownRight() == next){
-                    // Line Case    
-                    rotateLeft(gp);
+                } else {
+                    if (next == parent.getDownLeft()){
+                        next = parent;
+                        rotateRight(next);
+                    }
                     parent.setColor(Color.BLACK);
-                    gp.setColor(Color.BLACK);
-                    next = gp;
-                } else if (gp.getDownLeft().getColor() == Color.BLACK && parent.getDownLeft() == next){
-                    // Triangle Case
-                    next = parent;
-                    rotateRight(parent);
+                    gp.setColor(Color.RED);
+                    rotateLeft(gp);
                 }
             }
             if(next == this.root){
                 break;
             }
         }
+    
         this.root.setColor(Color.BLACK);
     }
 
     public void rotateLeft(Node x){
         Node y = x.getDownRight();
         x.setDownRight(y.getDownLeft());
-        if(x.getParent()==null){
-            this.root = y;
-        } else {
-            Node p = x.getParent();
-            if (p.getBack() == x){
-                p.setDownLeft(y);
-            } else{
-                p.setDownRight(y);
-            }
-            y.setParent(p);
+        if (!y.getDownLeft().isNil()){
+            y.getDownLeft().setParent(x);
         }
-        x.setParent(y);
+        y.setParent(x.getParent());
+
+        if (x.getParent() == null){
+            this.root = y;
+        } else if (x == x.getParent().getDownLeft()){
+            x.getParent().setDownLeft(y);
+        } else {
+            x.getParent().setDownRight(y);
+        }
+
         y.setDownLeft(x);
+        x.setParent(y);
     }
     public void rotateRight(Node x){
         Node y = x.getDownLeft();
         x.setDownLeft(y.getDownRight());
-        if(x.getParent()== null){
-            this.root = y;
-            x.setParent(y);
-        } else {
-            Node p = x.getParent();
-            if (p.getNext() == x){
-                p.setDownRight(y);
-            } else {
-                p.setDownLeft(y);
-            }
-            y.setParent(p);
+
+        if (!y.getDownRight().isNil()){
+            y.getDownRight().setParent(x);
         }
-        y.setDownRight(x);
+
+        y.setParent(x.getParent());
+
+        if (x.getParent() == null){
+            this.root = y;
+        } else if (x == x.getParent().getDownRight()){
+            x.getParent().setDownRight(y);
+        } else {
+            x.getParent().setDownLeft(y);
+        }
+
+        y.setDownRight(x);;
         x.setParent(y);
     }
 
@@ -318,6 +344,7 @@ class TreasureTree{
 }
 class TreeGraph{
     Node head, tail;
+    final Node NIL = new Node();
     int count;
     // ArrayList<TreasureTree> valley = new ArrayList<TreasureTree>();
     HashMap<Integer, TreasureTree> valleyTracker = new HashMap<Integer, TreasureTree>();
@@ -339,14 +366,10 @@ class TreeGraph{
                 // Ascending Already
                 oldNode.setPeak(false);
                 newNode.setPeak(true);
-                // Case for when there's only two
-                
-                
             } else if(oldNode.isValley()){
                 // Begin Ascent, depth already init to 0
                 newNode.setPeak(true);
                 addToTree(oldDepth, oldNode);
-                // valleyTracker.put(oldDepth, oldNode)
             }   
         } else {
             // Old Node larger
@@ -355,14 +378,11 @@ class TreeGraph{
             if (oldNode.isValley()){
                 // Descending
                 oldNode.setValley(false);
-                removeFromTree(oldDepth, oldNode);
                 newNode.setValley(true);
                 newNode.setDepth(oldDepth+1);
-                addToTree(oldDepth+1, newNode);
             } else if(oldNode.isPeak()){
                 // Begin to descend
                 newNode.setValley(true);
-                addToTree(1, newNode);
                 newNode.setDepth(1);
             }
             
@@ -380,8 +400,10 @@ class TreeGraph{
         this.count++;
     }
     public void addToTree(int depth, Node n){
+        n.setDownLeft(NIL);
+        n.setDownRight(NIL);
         if(valleyTracker.get(depth) == null){
-            valleyTracker.put(depth, new TreasureTree(n));
+            valleyTracker.put(depth, new TreasureTree(n,NIL));
         } else {
             valleyTracker.get(depth).addValley(n);
         }
@@ -389,39 +411,50 @@ class TreeGraph{
 
     public void removeFromTree(int depth, Node n){
         valleyTracker.get(depth).removeValley(n);
+        n.setDownLeft(NIL);
+        n.setDownRight(NIL);
     }
     public void insertAt(Node valley, Node newNode){
+        int oldDepth = valley.getDepth();
         if(this.count == 1){
             this.head = newNode;
             this.tail = valley;
+            this.head.setNext(this.tail);
+            this.tail.setBack(this.head);
             if(newNode.getHeight() > valley.getHeight()){
-                removeFromTree(0, valley);
+                // newNode is larger
+                removeFromTree(oldDepth, valley);
                 valley.setDepth(1);
                 addToTree(1, valley);
                 this.tail.setPeak(false);
                 newNode.setPeak(true);
             } else{
+                // newNode becomes valley. And since its haed, depth=0
                 newNode.setDepth(0);
-                removeFromTree(0, valley);
+                removeFromTree(oldDepth, valley);
                 addToTree(0, newNode);
                 newNode.setValley(true);
-                valley.setPeak(false);
+                valley.setValley(false);
             }
         } else {
             Node back = valley.getBack();
             valley.setBack(newNode);
-            back.setNext(newNode);
+            if (back != null){
+                back.setNext(newNode);
+            }
             newNode.setBack(back);
             newNode.setNext(valley);
             if(valley == this.head){
                 this.head = newNode;
                 if(newNode.getHeight() > valley.getHeight()){
+                    // We know already that the right is taller than the valley
                     newNode.setPeak(true);
                     newNode.setDepth(0);
                     valley.setDepth(1);
                     removeFromTree(0, valley);
                     addToTree(1, valley);
                 } else{
+                    // New node is smaller than valley, so it becomes one
                     removeFromTree(0, valley);
                     addToTree(0, newNode);
                     newNode.setValley(true);
@@ -431,12 +464,46 @@ class TreeGraph{
                 if(newNode.getHeight() > valley.getHeight()){
                     // Right remains valley, are we a peak?
                     if(back.getHeight() > newNode.getHeight()){
-                        newNode.setDepth(back.getDepth()+1);
-                        this.tail.setDepth(newNode.getDepth()+1);
+                        // Meaning we are descending
+                        newNode.setDepth(oldDepth);
+                        removeFromTree(oldDepth, valley);
+                        valley.setDepth(oldDepth+1);
+                        addToTree(oldDepth+1, valley);
                     } else {
-                        // Greater than left
+                        // Greater than left and right, So we are a peak
                         newNode.setPeak(true);
-                        newNode.getNext().setDepth(1);
+                        back.setPeak(false);
+                        if (oldDepth != 1){
+                            removeFromTree(oldDepth, valley);
+                            addToTree(1, valley);
+                        }
+                        if(back == this.head){
+                            this.head.setValley(true);
+                            this.head.setPeak(false);
+                            addToTree(0, this.head);
+                        } else {
+                            // Since inserted node is larger than both left and right, check if left became a valley
+                            Node backback = back.getBack();
+                            if (backback.getHeight() > back.getHeight()){
+                                // If bigger than inbetween 
+                                int backdepth = back.getDepth();
+                                back.setValley(true);
+                                back.setDepth(backdepth);
+                                addToTree(backdepth, back);
+                            }
+                        }
+                    }
+                } else {
+                    //  newNode is smaller than previous valley
+                    if(back.getHeight() > newNode.getHeight()){
+                            // newNode is now a valley
+                        newNode.setValley(true);
+                        newNode.setDepth(back.getDepth()+1);
+                        valley.setDepth(0);
+                        valley.setValley(false);
+                        if(valley == this.tail){
+                            this.tail.setPeak(true);
+                        }
                     }
                 }
             }
@@ -526,8 +593,9 @@ class TreeGraph{
                     int depth = left.getDepth();
                     if (right.getHeight() < left.getHeight()){
                         if (right.isValley()){
+                            // Remove from original depth and place it in right spot
                             removeFromTree(right.getDepth(), right);
-                            addToTree(right.getDepth()+1, right);
+                            // addToTree(right.getDepth()+1, right);
                         } else if(right == this.tail){
                             this.tail.setValley(true);
                             this.tail.setPeak(false);
@@ -620,9 +688,11 @@ public class TreasureValleyExplorer {
     public boolean insertAtMostValuableValley(int height, int value, int depth) {
         // TODO: Implement the insertAtMostValuableValley method
         TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
+        if(t == null) {return false;}
         if(t.getCount() == 0) {return false;}
         Node max = t.findMax();
-
+        Node toIns = new Node (height, value);
+        treasureMap.insertAt(max, toIns);
         return true;
     }   
 
@@ -638,7 +708,13 @@ public class TreasureValleyExplorer {
      */
     public boolean insertAtLeastValuableValley(int height, int value, int depth) {
         // TODO: Implement the insertAtLeastValuableValley method
-        return false;
+        TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
+        if(t == null) {return false;}
+        if(t.getCount() == 0) {return false;}
+        Node min = t.findMin();
+        Node toIns = new Node (height, value);
+        treasureMap.insertAt(min, toIns);
+        return true;
     }
 
     /**
@@ -652,6 +728,7 @@ public class TreasureValleyExplorer {
      */
     public IntPair removeMostValuableValley(int depth) {
         TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
+        if(t == null) {return null;}
         if(t.getCount() == 0) {return null;}
         Node curr = t.findMax();
         t.removeValley(curr);
@@ -670,6 +747,7 @@ public class TreasureValleyExplorer {
      */
     public IntPair removeLeastValuableValley(int depth) {
         TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
+        if(t == null) {return null;}
         if(t.getCount() == 0) {return null;}
         Node curr = t.findMin();
         t.removeValley(curr);
@@ -689,6 +767,7 @@ public class TreasureValleyExplorer {
      */
     public IntPair getMostValuableValley(int depth) {
         TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
+        if(t == null) {return null;}
         if(t.getCount() == 0) {return null;}
         Node curr = t.findMax();
         return new IntPair(curr.getHeight(), curr.getValue());
@@ -706,6 +785,7 @@ public class TreasureValleyExplorer {
      */
     public IntPair getLeastValuableValley(int depth) {
         TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
+        if(t == null) {return null;}
         if(t.getCount() == 0) {return null;}
         Node curr = t.findMin();
         return new IntPair(curr.getHeight(), curr.getValue());
