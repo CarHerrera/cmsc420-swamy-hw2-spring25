@@ -39,7 +39,7 @@ enum Color {
     RED, BLACK
 }
 class Node{
-    private Node left, right, downLeft, downRight, parent;
+    private Node LinkLeft, LinkRight, TreeLeft, TreeRight, parent;
     private int value, height, depth; 
     private boolean isPeak, isValley, isNil; 
     private Color color;
@@ -56,24 +56,24 @@ class Node{
     public Node (){
         this.isNil = true;
         this.color = Color.BLACK;
-        this.downLeft = this;
-        this.downRight = this;
+        this.TreeLeft = this;
+        this.TreeRight = this;
     }
     public void setValue(int n){this.value = n;}
     public void setHeight(int n){this.height = n;}
     public void setDepth(int n){this.depth = n;}
-    public void setBack(Node left){this.left = left;}
-    public void setNext(Node n){this.right = n;}
-    public void setDownLeft(Node n){this.downLeft = n;}
-    public void setDownRight(Node n){this.downRight = n;}
+    public void setBack(Node left){this.LinkLeft = left;}
+    public void setNext(Node n){this.LinkRight = n;}
+    public void setDownLeft(Node n){this.TreeLeft = n;}
+    public void setDownRight(Node n){this.TreeRight = n;}
     public void setPeak(boolean b){this.isPeak = b;}
     public void setValley(boolean b){this.isValley = b;}
     public void setColor(Color c){this.color = c;}
     public void setParent(Node n){this.parent = n;}
-    public Node getBack(){return this.left;}
-    public Node getNext(){return this.right;}
-    public Node getDownLeft(){return this.downLeft;}
-    public Node getDownRight(){return this.downRight;}
+    public Node getBack(){return this.LinkLeft;}
+    public Node getNext(){return this.LinkRight;}
+    public Node getDownLeft(){return this.TreeLeft;}
+    public Node getDownRight(){return this.TreeRight;}
     public Node getParent(){return this.parent;}
     public boolean isNil(){return this.isNil;}
     public boolean isPeak(){return this.isPeak;}
@@ -86,7 +86,8 @@ class Node{
 class TreasureTree{
     Node root;
     int count;
-    public TreasureTree(Node n, Node NIL){
+    final Node NIL = new Node();
+    public TreasureTree(Node n){
         this.root = n;
         this.count = 1;
         this.root.setColor(Color.BLACK);
@@ -95,8 +96,84 @@ class TreasureTree{
     }
 
     public void addValley(Node n){ 
+        n.setColor(Color.RED);
+        n.setParent(null);
+        if(n.getDepth() == 10){
+            int i = 0;
+        }
         addLeaf(n);
         this.count++;
+        
+    }
+    public void addLeaf(Node n){
+        n.setDownLeft(NIL);
+        n.setDownRight(NIL);
+        Node curr = this.root;
+        Node y = null;
+        while (!curr.isNil()){
+            y = curr;
+            if(n.getValue() < curr.getValue()){
+                curr = curr.getDownLeft();
+            } else {
+                curr = curr.getDownRight();
+            }
+        }
+        n.setParent(y);
+        if (y == null){
+            this.root = n;
+        } else if (n.getValue() < y.getValue()){
+            y.setDownLeft(n);
+        } else {
+            y.setDownRight(n);
+        }
+
+        if(n.getParent() == null){
+            n.setColor(Color.BLACK);
+            return;
+        } 
+        if(n.getParent().getParent() == null) { return;}
+        insertFix(n);
+    }
+    public void insertFix(Node n){
+        Node unc;
+        while(n.getParent().getColor() == Color.RED){
+            if(n.getParent() == n.getParent().getParent().getDownRight()){
+                unc = n.getParent().getParent().getDownLeft();
+                if(unc.getColor() == Color.RED){
+                    unc.setColor(Color.BLACK);
+                    n.getParent().setColor(Color.BLACK);
+                    n.getParent().getParent().setColor(Color.RED);
+                    n = n.getParent().getParent();
+                } else {
+                    if(n.getParent().getDownLeft() == n){
+                        n = n.getParent();
+                        rotateRight(n);
+                    }
+                    n.getParent().setColor(Color.BLACK);
+                    n.getParent().getParent().setColor(Color.RED);
+                    rotateLeft(n.getParent().getParent());
+                }
+            } else {
+                unc = n.getParent().getParent().getDownRight();
+                if(unc.getColor() == Color.RED){
+                    unc.setColor(Color.BLACK);
+                    n.getParent().setColor(Color.BLACK);
+                    n.getParent().getParent().setColor(Color.RED);
+                    n = n.getParent().getParent();
+                } else {
+                    if(n.getParent().getDownRight() == n){
+                        n = n.getParent();
+                        rotateLeft(n);
+                    }
+                    n.getParent().setColor(Color.BLACK);
+                    n.getParent().getParent().setColor(Color.RED);
+                    rotateRight(n.getParent().getParent());
+                }
+            }
+            if(n == this.root) { break;}
+
+        }
+        this.root.setColor(Color.BLACK);
     }
     public void removeValley(Node n){
         Color org = n.getColor();
@@ -132,8 +209,9 @@ class TreasureTree{
         if (org == Color.BLACK){
             delete_fixup(x);
         }
-        // n.setDownLeft(NIL);
-        // n.setDownRight(NIL);
+        n.setDownLeft(NIL);
+        n.setDownRight(NIL);
+        n.setParent(null);
         this.count--;
     }
     public void delete_fixup(Node x){
@@ -206,86 +284,12 @@ class TreasureTree{
         }
         v.setParent(u.getParent());
     }
-    public void addLeaf(Node n){
-        //System.out.println("Visiting node " + last + " and adding " + n);
-        Node curr = this.root;
-        Node y = null;
-        while (!curr.isNil()){
-            y = curr;
-            if(n.getValue() < curr.getValue()){
-                curr = curr.getDownLeft();
-            } else {
-                curr = curr.getDownRight();
-            }
-        }
-        n.setParent(y);
-        if (y == null){
-            this.root = n;
-        } else if (n.getValue() < y.getValue()){
-            y.setDownLeft(n);
-        } else {
-            y.setDownRight(n);
-        }
 
-        if(n.getParent() == null){
-            n.setColor(Color.BLACK);
-            return;
-        } 
-        if(n.getParent().getParent() == null) { return;}
-        insertFix(n);
-    }
-    public void insertFix(Node n){
-        Node next = n;
-        while(next.getParent().getColor() == Color.RED){
-            Node parent = next.getParent();
-            Node gp = parent.getParent();
-            if(gp.getDownLeft() == parent){
-                // Parent is the Left Child
-                Node r = gp.getDownRight();
-                if (r.getColor() == Color.RED){
-                    parent.setColor(Color.BLACK);
-                    r.setColor(Color.BLACK);
-                    gp.setColor(Color.RED);
-                    next = gp;
-                } else {
-                    if (next == parent.getDownRight()){
-                        next = parent;
-                        rotateLeft(next);
-                    }
-                    parent.setColor(Color.BLACK);
-                    gp.setColor(Color.RED);
-                    rotateRight(gp);
-                }
-            } else {
-                // Parent is the Right child
-                Node l = gp.getDownLeft();
-                if (l.getColor() == Color.RED){
-                    l.setColor(Color.BLACK);
-                    parent.setColor(Color.BLACK);
-                    gp.setColor(Color.RED);
-                    next = gp;
-                } else {
-                    if (next == parent.getDownLeft()){
-                        next = parent;
-                        rotateRight(next);
-                    }
-                    parent.setColor(Color.BLACK);
-                    gp.setColor(Color.RED);
-                    rotateLeft(gp);
-                }
-            }
-            if(next == this.root){
-                break;
-            }
-        }
-    
-        this.root.setColor(Color.BLACK);
-    }
 
     public void rotateLeft(Node x){
         Node y = x.getDownRight();
         x.setDownRight(y.getDownLeft());
-        if (!y.getDownLeft().isNil()){
+        if(!y.getDownLeft().isNil()){
             y.getDownLeft().setParent(x);
         }
         y.setParent(x.getParent());
@@ -344,7 +348,6 @@ class TreasureTree{
 }
 class TreeGraph{
     Node head, tail;
-    final Node NIL = new Node();
     int count;
     // ArrayList<TreasureTree> valley = new ArrayList<TreasureTree>();
     HashMap<Integer, TreasureTree> valleyTracker = new HashMap<Integer, TreasureTree>();
@@ -370,7 +373,7 @@ class TreeGraph{
                 // Begin Ascent, depth already init to 0
                 newNode.setPeak(true);
                 addToTree(oldDepth, oldNode);
-            }   
+            }  
         } else {
             // Old Node larger
             oldNode.setNext(newNode);
@@ -400,10 +403,9 @@ class TreeGraph{
         this.count++;
     }
     public void addToTree(int depth, Node n){
-        n.setDownLeft(NIL);
-        n.setDownRight(NIL);
+
         if(valleyTracker.get(depth) == null){
-            valleyTracker.put(depth, new TreasureTree(n,NIL));
+            valleyTracker.put(depth, new TreasureTree(n));
         } else {
             valleyTracker.get(depth).addValley(n);
         }
@@ -411,10 +413,9 @@ class TreeGraph{
 
     public void removeFromTree(int depth, Node n){
         valleyTracker.get(depth).removeValley(n);
-        n.setDownLeft(NIL);
-        n.setDownRight(NIL);
+
     }
-    public void insertAt(Node valley, Node newNode){
+    public void insertAt(Node valley, Node newNode){  
         int oldDepth = valley.getDepth();
         if(this.count == 1){
             this.head = newNode;
@@ -427,6 +428,7 @@ class TreeGraph{
                 valley.setDepth(1);
                 addToTree(1, valley);
                 this.tail.setPeak(false);
+                
                 newNode.setPeak(true);
             } else{
                 // newNode becomes valley. And since its haed, depth=0
@@ -434,134 +436,114 @@ class TreeGraph{
                 removeFromTree(oldDepth, valley);
                 addToTree(0, newNode);
                 newNode.setValley(true);
+                // Since count is one, valley had been both a peak and a valley
                 valley.setValley(false);
             }
-        } else {
-            Node back = valley.getBack();
+        } else if (valley == this.head){
+            this.head = newNode;
+            this.head.setNext(valley);
             valley.setBack(newNode);
-            if (back != null){
-                back.setNext(newNode);
+            if(newNode.getHeight() > valley.getHeight()){
+                // newNode is larger
+                removeFromTree(0, valley);
+                valley.setDepth(1);
+                addToTree(1, valley);
+                newNode.setPeak(true);
+            } else{
+                // newNode becomes valley. And since its haed, depth=0
+                newNode.setDepth(0);
+                removeFromTree(oldDepth, valley);
+                addToTree(0, newNode);
+                newNode.setValley(true);
+                // Since count is one, valley had been both a peak and a valley
+                valley.setValley(false);
             }
+        } else{
+            // Connect the newnode to the list
+            Node back = valley.getBack();
+            back.setNext(newNode);
             newNode.setBack(back);
             newNode.setNext(valley);
-            if(valley == this.head){
-                this.head = newNode;
-                if(newNode.getHeight() > valley.getHeight()){
-                    // We know already that the right is taller than the valley
+            valley.setBack(newNode);
+            if(valley.getHeight() < newNode.getHeight()){
+                // Valley is smaller than newNode. So it remains a Valley 
+                if(back.getHeight() < newNode.getHeight()){
+                    // newNode is a peak
                     newNode.setPeak(true);
-                    newNode.setDepth(0);
+                    removeFromTree(oldDepth, valley);
                     valley.setDepth(1);
-                    removeFromTree(0, valley);
                     addToTree(1, valley);
-                } else{
-                    // New node is smaller than valley, so it becomes one
-                    removeFromTree(0, valley);
-                    addToTree(0, newNode);
-                    newNode.setValley(true);
-                    valley.setValley(false);
-                }
-            } else{
-                if(newNode.getHeight() > valley.getHeight()){
-                    // Right remains valley, are we a peak?
-                    if(back.getHeight() > newNode.getHeight()){
-                        // Meaning we are descending
-                        newNode.setDepth(oldDepth);
-                        removeFromTree(oldDepth, valley);
-                        valley.setDepth(oldDepth+1);
-                        addToTree(oldDepth+1, valley);
-                    } else {
-                        // Greater than left and right, So we are a peak
-                        newNode.setPeak(true);
+                    if(back.isPeak()){
+                        // Just Ascending
+                        back.setDepth(0);
                         back.setPeak(false);
-                        if (oldDepth != 1){
-                            removeFromTree(oldDepth, valley);
-                            addToTree(1, valley);
-                        }
                         if(back == this.head){
-                            this.head.setValley(true);
-                            this.head.setPeak(false);
-                            addToTree(0, this.head);
-                        } else {
-                            // Since inserted node is larger than both left and right, check if left became a valley
-                            Node backback = back.getBack();
-                            if (backback.getHeight() > back.getHeight()){
-                                // If bigger than inbetween 
-                                int backdepth = back.getDepth();
-                                back.setValley(true);
-                                back.setDepth(backdepth);
-                                addToTree(backdepth, back);
-                            }
+                            addToTree(0, back);
+                            back.setValley(true);
                         }
+                    } else {
+                        // Becomes a new valley
+                        back.setValley(true);
+                        addToTree(back.getDepth(), back);
                     }
                 } else {
-                    //  newNode is smaller than previous valley
-                    if(back.getHeight() > newNode.getHeight()){
-                            // newNode is now a valley
-                        newNode.setValley(true);
-                        newNode.setDepth(back.getDepth()+1);
-                        valley.setDepth(0);
-                        valley.setValley(false);
-                        if(valley == this.tail){
-                            this.tail.setPeak(true);
-                        }
-                    }
+                    // Bigger than valley but smaller than oldBack, so we are descending
+                    // Takes its old spot
+                    removeFromTree(oldDepth, valley);
+                    newNode.setDepth(oldDepth);
+                    valley.setDepth((oldDepth+1));
+                    addToTree((oldDepth+1), valley);
                 }
-            }
 
-            
-        }
-        
+            } else {
+                // Valley is larger than the newNode
+                if(valley == this.tail){
+                    this.tail.setPeak(true);
+                }
+                newNode.setValley(true);
+                newNode.setDepth(oldDepth);
+                removeFromTree(oldDepth, valley);
+                addToTree(oldDepth, newNode);
+                valley.setValley(false);
+                valley.setDepth(0);
+            }
+        } 
         this.count++;
+        
+        
     }
     public void remove(Node valley){
+        removeFromTree(valley.getDepth(), valley);
         if(this.count == 1){
             this.head = this.tail = null;
         } else {
             if (this.head == valley){
                 Node next = valley.getNext();
-                removeFromTree(this.head.getDepth(), this.head);
                 this.head.setNext(null);
                 next.setBack(null);
                 // New Head Set
                 this.head = next;
                 // Next of New Head
                 next = this.head.getNext();
-                    if(next == null){
-                        // Only node left in the list
-                        this.tail = this.head;
-                        this.head.setValley(true);
-                        this.head.setPeak(true);
+                if(next == null){
+                    // Only node left in the list
+                    this.tail = this.head;
+                    this.head.setValley(true);
+                    this.head.setPeak(true);
+                    this.head.setDepth(0);
+                    addToTree(0, this.head);
+                } else{
+                    if(!this.head.isPeak()){
+                        // Previously was part of asecnding sequence
                         this.head.setDepth(0);
-                    } else{
-                        if(next.getHeight() > this.head.getHeight()){
-                            this.head.setValley(true);
-                            this.head.setDepth(0);
-                            addToTree(0, this.head);
-                        } else {
-                            this.head.setPeak(true);
-                            this.head.setDepth(0);
-                            int depth = 0;
-                            // Maybe could skip if head was already a peak before replacement
-                            while(next.getNext() != null ){
-                                //  if we are descending
-                                depth++;
-                                if(next.getNext().getHeight() < next.getHeight()){
-                                    next.getNext().setDepth(depth);
-                                } else {
-                                    // Found something larger than us to the right
-                                    // Depths been configured
-                                    break;
-                                }
-                                next = next.getNext();
-                            }
-                            // Because it could not be a valley idk
-                            // next.setValley(true);
-                        }
+                        this.head.setValley(true);
+                        addToTree(0, this.head);
                     }
+                }
                     
             } else if (this.tail == valley){
                 Node back = this.tail.getBack();
-                removeFromTree(this.tail.getDepth(), this.tail);
+                // removeFromTree(this.tail.getDepth(), this.tail);
                 this.tail.setBack(null);
                 back.setNext(null);
                 this.tail = back;
@@ -586,47 +568,67 @@ class TreeGraph{
                 Node next = valley.getNext();
                 back.setNext(next);
                 next.setBack(back);
-                Node left = back;
-                while(left.getNext() != null){
-                    // Descending
-                    Node right = left.getNext();
-                    int depth = left.getDepth();
-                    if (right.getHeight() < left.getHeight()){
-                        if (right.isValley()){
-                            // Remove from original depth and place it in right spot
-                            removeFromTree(right.getDepth(), right);
-                            // addToTree(right.getDepth()+1, right);
-                        } else if(right == this.tail){
-                            this.tail.setValley(true);
-                            this.tail.setPeak(false);
-                            this.tail.setDepth(depth+1);
-                            addToTree(depth+1,right);
-                            break;
-                        }
-                        right.setDepth(depth+1);
+                if(back.isPeak() && next.isPeak()){
+                    // Both are peaks so depths are already 0
+                    if (back.getHeight() < next.getHeight()){
+                        // No need to fix depths
+                        back.setPeak(false);
                     } else {
-                        // Detected that the right is taller than left
-                        // Extra check to ensure that whatever is to the left of left is taller than us
-                        if(left == head){
-                            this.head.setDepth(0);
-                            this.head.setValley(true);
-                            addToTree(0, this.head);
-                        } else {
-                            if(left.getBack().getHeight() > left.getHeight()){
-                                left.setValley(true);
-                                addToTree(left.getDepth(), left);
-                            }
-                            
-                        }
-                        break;
+                        next.setPeak(false);
+                        adjustDepths(back);
                     }
-                    left = right;
+                } else if (back.isPeak() && !next.isPeak()){
+                    if (back.getHeight() < next.getHeight()){
+                        // No need to fix depths
+                        // This is ascending
+                        back.setPeak(false);
+                    } else {
+                        // Since next is not a peak, its known thats its smaller than the right. Now its a valley
+                        next.setDepth(1);
+                        next.setValley(true);
+                        addToTree(1, next);
+                    }
+                } else if (!back.isPeak() && next.isPeak()){
+                    if (back.getHeight() < next.getHeight()){
+                        // Smaller than left, and right so valley
+                        back.setValley(true);
+                        addToTree(back.getDepth(), back);
+                    } else {
+                        // next is smaller, so its a descending sequence
+                        next.setPeak(false);
+                        adjustDepths(back);
+                    }
+                } else {
+                    // Neither are peaks, so one of them becomes a valley
+                    if (back.getHeight() < next.getHeight()){
+                        addToTree(back.getDepth(), back);
+                        back.setValley(true);
+                    } else {
+                        // Next is a valley
+                        addToTree(back.getDepth()+1, next);
+                        next.setDepth(back.getDepth()+1);
+                        next.setValley(true);
+                    }
                 }
+                
             }
         }
         
         
         this.count--;
+    }
+    public void adjustDepths(Node n){
+        Node x = n;
+        int depths = n.getDepth();
+        while(x.getNext() != null && x.getHeight() > x.getNext().getHeight()){
+            x = x.getNext();
+            if (x.isValley()){
+                removeFromTree(x.getDepth(), x);
+                addToTree((depths+1), x);
+            }
+            depths++;
+            x.setDepth(depths);
+        }
     }
     public TreasureTree getTreasuresAtDepth(int i) {return this.valleyTracker.get(i);}
     public int getCount(){return this.count;}
@@ -671,7 +673,6 @@ public class TreasureValleyExplorer {
      * @return true if the landscape is empty, false otherwise.
      */
     public boolean isEmpty() {
-        // TODO: Implement the isEmpty method.
         return treasureMap.getCount() == 0;
     }
 
@@ -686,7 +687,6 @@ public class TreasureValleyExplorer {
      * @return true if the insertion is successful, false otherwise
      */
     public boolean insertAtMostValuableValley(int height, int value, int depth) {
-        // TODO: Implement the insertAtMostValuableValley method
         TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
         if(t == null) {return false;}
         if(t.getCount() == 0) {return false;}
@@ -707,7 +707,6 @@ public class TreasureValleyExplorer {
      * @return true if the insertion is successful, false otherwise
      */
     public boolean insertAtLeastValuableValley(int height, int value, int depth) {
-        // TODO: Implement the insertAtLeastValuableValley method
         TreasureTree t = treasureMap.getTreasuresAtDepth(depth);
         if(t == null) {return false;}
         if(t.getCount() == 0) {return false;}
@@ -731,7 +730,6 @@ public class TreasureValleyExplorer {
         if(t == null) {return null;}
         if(t.getCount() == 0) {return null;}
         Node curr = t.findMax();
-        t.removeValley(curr);
         treasureMap.remove(curr);
         return new IntPair(curr.getHeight(), curr.getValue());
     }
@@ -750,7 +748,6 @@ public class TreasureValleyExplorer {
         if(t == null) {return null;}
         if(t.getCount() == 0) {return null;}
         Node curr = t.findMin();
-        t.removeValley(curr);
         treasureMap.remove(curr);
         return new IntPair(curr.getHeight(), curr.getValue());
     }
